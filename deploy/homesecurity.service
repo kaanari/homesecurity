@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=simple
 User=ayka
 WorkingDirectory=/home/ayka/Desktop/homesecurity
+ExecStartPre=+/bin/systemctl restart nvargus-daemon.service
 ExecStart=/usr/bin/python3 -u jetsonano/securitycamnano.py
 Restart=always
 RestartSec=10
