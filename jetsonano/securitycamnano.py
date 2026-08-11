@@ -46,7 +46,7 @@ video_num=file_counter.count
 if usbcam: #defined in config.py
 	camera=cv2.VideoCapture(0)
 else:
-	camera=cv2.VideoCapture(gstreamer_pipeline(flip_method=0),cv2.CAP_GSTREAMER)
+	camera=cv2.VideoCapture(gstreamer_pipeline(flip_method=2),cv2.CAP_GSTREAMER)
 
 if not camera.isOpened():
     raise RuntimeError('Camera could not be opened')
