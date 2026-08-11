@@ -49,9 +49,11 @@ if not camera.isOpened():
     raise RuntimeError('Camera could not be opened')
 
 fct=FileCleanerThread()
+fct.daemon = True
 fct.start()
 
 fmt= FileManagerThread(h264_q=file_q)
+fmt.daemon = True
 fmt.start()
 
 
