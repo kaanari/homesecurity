@@ -6,3 +6,5 @@
 *.DS_Store*
 *.pb
 logs/liveness_enabled
+logs/photo_requested
+logs/camera_heartbeat

@@ -1,0 +1,17 @@
+[Unit]
+Description=Home security Telegram command bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ayka
+WorkingDirectory=/home/ayka/Desktop/homesecurity
+ExecStart=/usr/bin/python3 -u common/telegram_bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
