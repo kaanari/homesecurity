@@ -25,15 +25,18 @@ print('Finished importing modules')
 print(('Sleeping for {} seconds'.format(initial_sleep)))
 time.sleep(initial_sleep)
 
-def gstreamer_pipeline (capture_width=320, capture_height=240, display_width=320, display_height=240, framerate=60, flip_method=0) :   
-    return ('nvarguscamerasrc ! ' 
+def gstreamer_pipeline (capture_width=1920, capture_height=1080, display_width=320, display_height=240, framerate=30, flip_method=0) :
+    # IMX219 sensor mode 2 is native 1920x1080 at 30 FPS. Capturing in a
+    # native mode avoids Argus silently selecting the much heavier 120 FPS
+    # mode; nvvidconv performs the 320x240 resize in hardware.
+    return ('nvarguscamerasrc sensor-mode=2 ! '
     'video/x-raw(memory:NVMM), '
     'width=(int)%d, height=(int)%d, '
     'format=(string)NV12, framerate=(fraction)%d/1 ! '
     'nvvidconv flip-method=%d ! '
     'video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! '
     'videoconvert ! '
-    'video/x-raw, format=(string)BGR ! appsink'  % (capture_width,capture_height,framerate,flip_method,display_width,display_height))
+    'video/x-raw, format=(string)BGR ! appsink drop=true max-buffers=1 sync=false'  % (capture_width,capture_height,framerate,flip_method,display_width,display_height))
 
 time_since_last_sent=200 #in minutes
 time_last_sent=time.time()
@@ -119,6 +122,8 @@ if __name__ == '__main__':
 
         if count%50==0:
             not_beginning=True
+
+        if count%300==0:
             print(('frame rate={}'.format(count/(time.time()-start))))
 
         if not_beginning and motion_magnitude>=motion_threshold:
