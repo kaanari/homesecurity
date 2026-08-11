@@ -9,7 +9,7 @@ Software for security monitoring with single or multiple cameras with:
 
 ## Functions
 - Raspberry pi 3: The camera performs motion detection and records a video. The video is sent in an email.
-- Jetson Nano: After recording video, an object detection model checks if a person is presentin the video. If yes, the video and a screenshot are sent by email.
+- Jetson Nano: After recording video, an object detection model checks if a person is present in the video. If yes, the video and a screenshot are sent through Telegram.
 - Jetson TX2 + Pi Zeros: A set of 4 raspi zeros stream video over Wi-Fi to a Jetson TX2, which combines inputs from all sources, performs object detection and displays the results on a monitor.
 - Jetson Xavier + Pi Zeros: Same as that of TX2
 
@@ -42,7 +42,15 @@ You may have to install some dependecies in order for the script to work. Instru
 - [Jetson TX2](https://github.com/dataplayer12/homesecurity/tree/master/jetsontx2)
 - [Jetson Xavier](https://github.com/dataplayer12/homesecurity/tree/master/xavier)
 
-If you are using a raspberry pi 3/4 or Jetson Nano, you will have to provide email addresses for receiving videos when some activity is observed by the camera. This is done by writing these details to a `confidential.txt` text file.
+The Jetson Nano sends alerts through a Telegram bot. Create `confidential.txt` in the project root with the bot token and the numeric chat/user ID:
+
+```Text
+{"telegram_bot_token": "123456:replace-with-token", "telegram_chat_id": 123456789}
+```
+
+Alternatively, set the `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` environment variables. Never commit the token; `confidential.txt` is ignored by Git.
+
+The Raspberry Pi 3/4 email notifier still uses email credentials in `confidential.txt`:
 ```Shell
 cd homesecurity #be in the base directory of the project
 nano confidential.txt #open text file

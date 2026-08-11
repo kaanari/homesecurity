@@ -1,7 +1,7 @@
 import os, time
 import threading, queue
 import urllib.request, urllib.parse, urllib.error
-import send_email as sem
+import send_telegram as notifier
 from config import h264_folder, mp4_folder, motion_threshold,log_dir,log_file,logwrite_th, connect_th
 import human_detect as hd
 import shutil
@@ -54,7 +54,7 @@ class FileManagerThread(threading.Thread):
                             send_list=[fname,jpeg_name]
                         else:
                             send_list=[fname]
-                        sem.send_mail(files=send_list,text=message)
+                        notifier.send_alert(files=send_list, text=message)
                         self.files_sent.append((fname,now))
                         os.remove(fname)
                 except Exception as e:
@@ -67,7 +67,7 @@ class FileManagerThread(threading.Thread):
                     for f,now in self.files_not_sent:
                         try:
                             text="Motion detected in your room at {}. Please see attached video.\n".format(now)
-                            sem.send_mail(files=[mp4_folder+f],text=text)
+                            notifier.send_alert(files=[f], text=text)
                             self.files_not_sent.remove((f,now))
                             os.remove(mp4_folder+f)                            
                         except:
@@ -117,7 +117,7 @@ class FileCleanerThread(threading.Thread):
                     for f,now in self.files_not_sent:
                         try:
                             text="Motion detected in your room at {}. Please see attached video.\n".format(now)
-                            sem.send_mail(files=[mp4_folder+f],text=text)
+                            notifier.send_alert(files=[f], text=text)
                             self.files_not_sent.remove((f,now))
                         except:
                             continue
