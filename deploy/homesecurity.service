@@ -1,0 +1,19 @@
+[Unit]
+Description=Jetson Nano home security camera
+After=network-online.target nvargus-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ayka
+WorkingDirectory=/home/ayka/Desktop/homesecurity
+ExecStart=/usr/bin/python3 -u jetsonano/securitycamnano.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=20
+KillSignal=SIGINT
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

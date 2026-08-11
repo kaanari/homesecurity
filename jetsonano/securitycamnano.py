@@ -1,6 +1,7 @@
 import cv2, time, os
 #import send_email
 import queue
+import threading
 import numpy as np
 
 import sys
@@ -9,8 +10,12 @@ sys.path.append(os.getcwd()+'/human_detection/')
 
 from config import * #h264_folder, mp4_folder, motion_threshold,log_dir,log_file,countfile
 from file_managernano import FileManagerThread, FileCleanerThread, counter
+import send_telegram as notifier
 
 file_q = queue.Queue()
+command_q = queue.Queue()
+liveness_file = os.path.join(log_dir, 'liveness_enabled')
+started_at = time.time()
 
 os.environ['TZ']= location
 time.tzset()
@@ -40,11 +45,46 @@ if usbcam: #defined in config.py
 else:
 	camera=cv2.VideoCapture(gstreamer_pipeline(flip_method=0),cv2.CAP_GSTREAMER)
 
+if not camera.isOpened():
+    raise RuntimeError('Camera could not be opened')
+
 fct=FileCleanerThread()
 fct.start()
 
 fmt= FileManagerThread(h264_q=file_q)
 fmt.start()
+
+
+class TelegramCommandThread(threading.Thread):
+    def __init__(self):
+        super(TelegramCommandThread, self).__init__()
+        self.daemon = True
+
+    def run(self):
+        offset = None
+        while True:
+            try:
+                commands, updates = notifier.get_commands(offset=offset)
+                for update in updates:
+                    offset = max(offset or 0, update['update_id'] + 1)
+                for _, command in commands:
+                    command_q.put(command)
+            except Exception as error:
+                print('Telegram command polling failed: {}'.format(error))
+                time.sleep(10)
+
+
+TelegramCommandThread().start()
+
+
+def send_photo(frame, caption):
+    filename = os.path.join('/tmp', 'homesecurity-live.jpg')
+    cv2.imwrite(filename, frame)
+    try:
+        notifier.send_alert([filename], caption)
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
 
 def record_for(rec_time):
     video_num=file_counter.get_current_count()
@@ -74,6 +114,8 @@ if __name__ == '__main__':
     time.sleep(1)
     while True:
         ret,frame=camera.read()
+        if not ret or frame is None:
+            raise RuntimeError('Camera stopped returning frames')
         #cv2.imwrite('capture.jpg',image)
         fgmask=fgbg.apply(frame,learningRate=0.1)
         fgmask=cv2.erode(fgmask,kernel,iterations=1)
@@ -81,6 +123,32 @@ if __name__ == '__main__':
         #print(motion_magnitude)
         count+=1
         time_since_last_sent=(time.time()-time_last_sent)/60
+
+        liveness_enabled = os.path.exists(liveness_file)
+        while not command_q.empty():
+            command = command_q.get_nowait()
+            if command == '/status':
+                notifier.send_alert(text='Camera online. Uptime: {} minutes. Liveness: {}.'.format(
+                    int((time.time() - started_at) / 60),
+                    'on' if liveness_enabled else 'off'))
+            elif command == '/photo':
+                send_photo(frame, 'Live photo from the home security camera.')
+            elif command == '/liveness_on':
+                open(liveness_file, 'a').close()
+                liveness_enabled = True
+                time_last_sent = 0
+                notifier.send_alert(text='Hourly liveness photos enabled.')
+            elif command == '/liveness_off':
+                if os.path.exists(liveness_file):
+                    os.remove(liveness_file)
+                liveness_enabled = False
+                notifier.send_alert(text='Hourly liveness photos disabled.')
+            else:
+                notifier.send_alert(text='Commands: /status, /photo, /liveness_on, /liveness_off')
+
+        if liveness_enabled and (time.time() - time_last_sent) >= 3600:
+            send_photo(frame, 'Hourly liveness photo. Camera is online.')
+            time_last_sent = time.time()
 
         if count%50==0:
             not_beginning=True

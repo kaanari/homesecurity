@@ -8,6 +8,9 @@ from common import send_telegram
 
 
 class FakeResponse(object):
+    def __init__(self, result=None):
+        self.result = {'ok': True} if result is None else result
+
     def __enter__(self):
         return self
 
@@ -15,7 +18,7 @@ class FakeResponse(object):
         pass
 
     def read(self):
-        return json.dumps({'ok': True}).encode('utf-8')
+        return json.dumps(self.result).encode('utf-8')
 
 
 class TelegramNotifierTest(unittest.TestCase):
@@ -55,6 +58,24 @@ class TelegramNotifierTest(unittest.TestCase):
         request = urlopen.call_args[0][0]
         self.assertTrue(request.full_url.endswith('/sendMessage'))
         self.assertIn(b'Camera online', request.data)
+
+    @mock.patch.dict(os.environ, {
+        'TELEGRAM_BOT_TOKEN': 'test-token',
+        'TELEGRAM_CHAT_ID': '678221504',
+    })
+    @mock.patch('common.send_telegram.urllib.request.urlopen')
+    def test_accepts_commands_only_from_configured_user(self, urlopen):
+        urlopen.return_value = FakeResponse({'ok': True, 'result': [
+            {'update_id': 10, 'message': {
+                'from': {'id': 678221504}, 'text': '/status'}},
+            {'update_id': 11, 'message': {
+                'from': {'id': 999}, 'text': '/photo'}},
+        ]})
+
+        commands, updates = send_telegram.get_commands(timeout=0)
+
+        self.assertEqual(commands, [(10, '/status')])
+        self.assertEqual(len(updates), 2)
 
 
 if __name__ == '__main__':

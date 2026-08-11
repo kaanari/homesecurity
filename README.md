@@ -50,6 +50,16 @@ The Jetson Nano sends alerts through a Telegram bot. Create `confidential.txt` i
 
 Alternatively, set the `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` environment variables. Never commit the token; `confidential.txt` is ignored by Git.
 
+The authorized Telegram user can control the Jetson camera with:
+
+- `/status` — report camera uptime and liveness mode
+- `/photo` — send a current camera photo
+- `/liveness_on` — send a camera photo immediately and then every hour
+- `/liveness_off` — stop hourly photos
+
+`deploy/homesecurity.service` can be installed as a systemd service to start the
+camera at boot and restart it automatically after failures.
+
 The Raspberry Pi 3/4 email notifier still uses email credentials in `confidential.txt`:
 ```Shell
 cd homesecurity #be in the base directory of the project

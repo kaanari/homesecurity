@@ -4,6 +4,7 @@ import mimetypes
 import os
 import uuid
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
@@ -99,3 +100,30 @@ def send_alert(files=None, text=''):
         if index == 0 and caption:
             fields['caption'] = caption
         _call(method, fields, field, filename)
+
+
+def get_commands(offset=None, timeout=25):
+    """Long-poll Telegram and return authorized (update_id, command) pairs."""
+    token, chat_id = _credentials()
+    params = {'timeout': timeout, 'allowed_updates': json.dumps(['message'])}
+    if offset is not None:
+        params['offset'] = offset
+    url = 'https://api.telegram.org/bot{}/getUpdates?{}'.format(
+        token, urllib.parse.urlencode(params)
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=timeout + 10) as response:
+            result = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as error:
+        raise RuntimeError('Telegram API returned HTTP {}'.format(error.code))
+    except urllib.error.URLError as error:
+        raise RuntimeError('Could not connect to Telegram: {}'.format(error.reason))
+
+    commands = []
+    for update in result.get('result', []):
+        message = update.get('message', {})
+        sender_id = str(message.get('from', {}).get('id', ''))
+        text = message.get('text', '').strip().split('@', 1)[0].lower()
+        if sender_id == chat_id and text.startswith('/'):
+            commands.append((update['update_id'], text.split()[0]))
+    return commands, result.get('result', [])
